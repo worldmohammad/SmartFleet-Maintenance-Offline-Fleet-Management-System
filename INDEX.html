@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFleet Maintenance - Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        :root {
+            --primary: #3b82f6; --primary-dark: #1d4ed8; --secondary: #10b981;
+            --warning: #f59e0b; --danger: #ef4444; --info: #0ea5e9;
+            --dark: #1f2937; --gray: #9ca3af; --gray-light: #f3f4f6;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --radius: 12px; --radius-sm: 8px;
+        }
+        body {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            color: var(--dark); min-height: 100vh; padding: 16px;
+        }
+        body::before {
+            content: 'DEMO VERSION - Limited to 3 Vehicles';
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 4vw; color: rgba(239, 68, 68, 0.1);
+            white-space: nowrap; pointer-events: none; z-index: 9998;
+            font-weight: 900; user-select: none; letter-spacing: 4px;
+        }
+        body::after {
+            content: 'Upgrade at digitalyar.company';
+            position: fixed; top: 20%; left: 10%; transform: rotate(20deg);
+            font-size: 2.5vw; color: rgba(37, 99, 235, 0.07);
+            white-space: nowrap; pointer-events: none; z-index: 9997;
+            font-weight: 700; user-select: none;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .upgrade-banner {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid var(--warning); border-radius: var(--radius);
+            padding: 10px 20px; margin-bottom: 16px; text-align: center;
+            font-weight: 600; font-size: 0.85rem;
+        }
+        .upgrade-banner a { color: var(--primary-dark); font-weight: 700; }
+        header {
+            background: white; border-radius: var(--radius); box-shadow: var(--shadow-lg);
+            padding: 20px 24px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: relative; overflow: hidden;
+        }
+        header::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--primary), var(--secondary)); }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary), var(--info));
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.4rem;
+        }
+        .logo-text h1 { font-size: 1.4rem; font-weight: 800; }
+        .logo-text h1 .demo-badge { background: var(--warning); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 6px; }
+        .logo-text p { color: var(--gray); font-size: 0.8rem; }
+        .header-stats { display: flex; gap: 16px; }
+        .header-stat { text-align: center; }
+        .header-stat-value { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+        .header-stat-label { font-size: 0.75rem; color: var(--gray); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+        @media (max-width: 800px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+        .stat-card {
+            background: white; border-radius: var(--radius); padding: 18px;
+            box-shadow: var(--shadow); border-top: 4px solid var(--primary);
+        }
+        .stat-card.maintenance { border-top-color: var(--warning); }
+        .stat-card.fuel { border-top-color: var(--secondary); }
+        .stat-card.insurance { border-top-color: var(--info); }
+        .stat-card.inspection { border-top-color: var(--danger); }
+        .stat-title { font-size: 0.75rem; color: var(--gray); font-weight: 600; text-transform: uppercase; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; margin: 6px 0; }
+        .stat-subtitle { font-size: 0.8rem; color: var(--gray); }
+
+        .main-content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        @media (max-width: 1100px) { .main-content { grid-template-columns: 1fr; } }
+
+        .dashboard-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--gray-light); }
+        .card-title { font-size: 1.2rem; font-weight: 700; }
+        .card-title i { color: var(--primary); }
+
+        .tabs { display: flex; background: var(--gray-light); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 20px; overflow-x: auto; }
+        .tab { flex: 1; padding: 10px 16px; text-align: center; cursor: pointer; font-weight: 600; border-radius: 6px; transition: all 0.3s; color: var(--gray); white-space: nowrap; font-size: 0.85rem; }
+        .tab:hover { color: var(--primary); background: rgba(59,130,246,0.1); }
+        .tab.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 14px; }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--dark); font-size: 0.85rem; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: var(--radius-sm); font-size: 0.9rem; transition: all 0.3s; background: white; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        .btn { padding: 10px 20px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--secondary); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-xs { padding: 4px 8px; font-size: 0.7rem; }
+        .btn-pro { background: linear-gradient(135deg, #f59e0b, #d97706); opacity: 0.7; cursor: not-allowed; }
+        .pro-badge { background: rgba(255,255,255,0.3); font-size: 0.6rem; padding: 2px 6px; border-radius: 8px; font-weight: 700; text-transform: uppercase; margin-left: 4px; }
+
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th { background: var(--gray-light); padding: 12px 16px; text-align: left; font-weight: 700; border-bottom: 2px solid #e5e7eb; }
+        td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+        tr:hover { background: #f9fafb; }
+
+        .pagination-container { display: flex; justify-content: center; align-items: center; padding: 12px 0; gap: 8px; }
+
+        .status-badge { padding: 4px 10px; border-radius: 16px; font-size: 0.75rem; font-weight: 600; }
+        .status-active { background: rgba(16,185,129,0.1); color: var(--secondary); }
+        .status-warning { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .status-danger { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        @media (max-width: 1100px) { .sidebar { display: none; } }
+        .sidebar-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+        .sidebar-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+        .maintenance-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--gray-light); border-radius: var(--radius-sm); border-left: 4px solid var(--warning); margin-bottom: 8px; font-size: 0.85rem; }
+        .maintenance-item.urgent { border-left-color: var(--danger); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+        .modal-content { background: white; border-radius: var(--radius); padding: 24px; width: 100%; max-width: 450px; box-shadow: var(--shadow-lg); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--gray-light); }
+        .modal-title { font-size: 1.3rem; font-weight: 700; }
+        .close-modal { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--gray); }
+
+        .notification { position: fixed; bottom: 20px; right: 20px; padding: 14px 22px; border-radius: var(--radius); color: white; font-weight: 600; box-shadow: var(--shadow-lg); z-index: 1001; display: flex; align-items: center; gap: 10px; transform: translateX(120%); opacity: 0; transition: all 0.4s ease; max-width: 350px; }
+        .notification.show { transform: translateX(0); opacity: 1; }
+        .notification.success { background: var(--secondary); }
+        .notification.error { background: var(--danger); }
+        .notification.warning { background: var(--warning); }
+        .notification.info { background: var(--info); }
+
+        .empty-state { text-align: center; padding: 32px; color: var(--gray); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; color: #d1d5db; }
+        .vehicle-card { background: white; border-radius: var(--radius-sm); padding: 16px; box-shadow: var(--shadow); margin-bottom: 10px; display: flex; align-items: center; gap: 16px; }
+        .vehicle-icon { width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary), var(--info)); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; }
+        .vehicle-info h4 { font-weight: 700; font-size: 0.9rem; }
+        .vehicle-info p { color: var(--gray); font-size: 0.8rem; }
+        .fuel-type-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .fuel-gasoline { background: rgba(59,130,246,0.1); color: var(--primary); }
+        .fuel-diesel { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .fuel-cng { background: rgba(16,185,129,0.1); color: var(--secondary); }
+        .fuel-electric { background: rgba(14,165,233,0.1); color: var(--info); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upgrade-banner">
+            ⚠️ <strong>DEMO MODE:</strong> 3 vehicles max. Export, backup & charts disabled. 
+            <a href="https://digitalyar.company/product/spa12-smartfleet-maintenance/" target="_blank">Upgrade to Full Version →</a>
+        </div>
+
+        <header>
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-car"></i></div>
+                <div class="logo-text">
+                    <h1>SmartFleet <span class="demo-badge">DEMO</span></h1>
+                    <p>Fleet Preventive Maintenance System</p>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat"><div class="header-stat-value" id="totalVehicles">0</div><div class="header-stat-label">Vehicles</div></div>
+                <div class="header-stat"><div class="header-stat-value" id="pendingServices">0</div><div class="header-stat-label">Pending</div></div>
+                <div class="header-stat"><div class="header-stat-value" id="totalCost">$0</div><div class="header-stat-label">Month Cost</div></div>
+            </div>
+        </header>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="main-content">
+            <div class="main-panel">
+                <div class="dashboard-card">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="vehicles">Vehicles</div>
+                        <div class="tab" data-tab="maintenance">Maintenance</div>
+                        <div class="tab" data-tab="fuel">Fuel Logs</div>
+                        <div class="tab" data-tab="history">History</div>
+                        <div class="tab" data-tab="sample">Sample Data</div>
+                    </div>
+
+                    <!-- Vehicles -->
+                    <div class="tab-content active" id="vehicles-tab">
+                        <button class="btn btn-primary btn-sm" id="addVehicleBtn" style="margin-bottom:12px;"><i class="fas fa-plus"></i> Add Vehicle</button>
+                        <p style="font-size:0.75rem;color:var(--warning);margin-bottom:10px;">⚠️ Demo limit: 3 vehicles max</p>
+                        <div id="vehiclesList"></div>
+                    </div>
+
+                    <!-- Maintenance -->
+                    <div class="tab-content" id="maintenance-tab">
+                        <form id="maintenanceForm">
+                            <div class="form-grid">
+                                <div class="form-group"><label class="form-label">Vehicle</label><select class="form-select" id="maint-vehicle" required><option value="">Select...</option></select></div>
+                                <div class="form-group"><label class="form-label">Service Type</label><select class="form-select" id="maint-type" required><option value="oil-change">Oil Change</option><option value="tire-change">Tire Change</option><option value="brake-service">Brake Service</option><option value="engine-service">Engine Service</option><option value="general-check">General Check</option><option value="other">Other</option></select></div>
+                                <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="maint-date" required></div>
+                                <div class="form-group"><label class="form-label">Cost ($)</label><input class="form-input" type="number" id="maint-cost" min="0" required></div>
+                                <div class="form-group"><label class="form-label">Next Service</label><input class="form-input" type="date" id="maint-next"></div>
+                                <div class="form-group"><label class="form-label">Odometer</label><input class="form-input" type="number" id="maint-odo" min="0"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+                        </form>
+                    </div>
+
+                    <!-- Fuel -->
+                    <div class="tab-content" id="fuel-tab">
+                        <form id="fuelForm">
+                            <div class="form-grid">
+                                <div class="form-group"><label class="form-label">Vehicle</label><select class="form-select" id="fuel-vehicle" required><option value="">Select...</option></select></div>
+                                <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="fuel-date" required></div>
+                                <div class="form-group"><label class="form-label">Amount (L)</label><input class="form-input" type="number" id="fuel-amount" min="0" step="0.1" required></div>
+                                <div class="form-group"><label class="form-label">Cost ($)</label><input class="form-input" type="number" id="fuel-cost" min="0" required></div>
+                                <div class="form-group"><label class="form-label">Odometer</label><input class="form-input" type="number" id="fuel-odo" min="0"></div>
+                                <div class="form-group"><label class="form-label">Fuel Type</label><select class="form-select" id="fuel-type"><option value="gasoline">Gasoline</option><option value="diesel">Diesel</option><option value="cng">CNG</option><option value="electric">Electric</option></select></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-gas-pump"></i> Save</button>
+                        </form>
+                    </div>
+
+                    <!-- History -->
+                    <div class="tab-content" id="history-tab">
+                        <h3 style="margin-bottom:14px;">Service History</h3>
+                        <div class="table-responsive"><table><thead><tr><th>Date</th><th>Vehicle</th><th>Service</th><th>Cost</th><th>Next Due</th></tr></thead><tbody id="maintHistoryBody"></tbody></table></div>
+                        <h3 style="margin:20px 0 14px;">Fuel History</h3>
+                        <div class="table-responsive"><table><thead><tr><th>Date</th><th>Vehicle</th><th>Type</th><th>Amount</th><th>Cost</th></tr></thead><tbody id="fuelHistoryBody"></tbody></table></div>
+                    </div>
+
+                    <!-- Sample Data -->
+                    <div class="tab-content" id="sample-tab">
+                        <h3 style="margin-bottom:12px;"><i class="fas fa-database"></i> Sample Data</h3>
+                        <p style="color:var(--gray);margin-bottom:14px;font-size:0.9rem;">Load demo data to explore the system.</p>
+                        <button class="btn btn-info" id="loadSampleBtn"><i class="fas fa-download"></i> Load Sample Data</button>
+                        <button class="btn btn-danger" id="clearDataBtn" style="margin-left:8px;"><i class="fas fa-trash"></i> Clear All</button>
+                        <p style="margin-top:14px;font-size:0.8rem;color:var(--gray);">
+                            📥 <strong>Pro:</strong> Backup/Restore, CSV Export, Charts, Unlimited vehicles.
+                            <a href="https://digitalyar.company/product/spa12-smartfleet-maintenance/" target="_blank" style="color:var(--primary);">Upgrade →</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sidebar-card">
+                    <h3><i class="fas fa-crown"></i> Upgrade to Pro</h3>
+                    <p style="font-size:0.8rem;color:var(--gray);margin-bottom:10px;">Unlimited vehicles, backup, export & charts.</p>
+                    <a href="https://digitalyar.company/product/spa12-smartfleet-maintenance/" target="_blank" class="btn btn-primary btn-sm" style="width:100%;text-decoration:none;">Get Full Version</a>
+                </div>
+                <div class="sidebar-card">
+                    <h3><i class="fas fa-calendar-alt"></i> Upcoming</h3>
+                    <div id="upcomingList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="vehicleModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title">Add Vehicle</h3><button class="close-modal" onclick="closeModal()">&times;</button></div>
+            <form id="vehicleForm">
+                <div class="form-grid">
+                    <div class="form-group"><label class="form-label">Plate *</label><input class="form-input" type="text" id="v-plate" required></div>
+                    <div class="form-group"><label class="form-label">Name *</label><input class="form-input" type="text" id="v-name" required></div>
+                    <div class="form-group"><label class="form-label">Type *</label><select class="form-select" id="v-type" required><option value="">Select...</option><option value="car">Car</option><option value="truck">Truck</option><option value="van">Van</option><option value="bus">Bus</option><option value="motorcycle">Motorcycle</option></select></div>
+                    <div class="form-group"><label class="form-label">Model</label><input class="form-input" type="text" id="v-model"></div>
+                    <div class="form-group"><label class="form-label">Color</label><input class="form-input" type="text" id="v-color"></div>
+                    <div class="form-group"><label class="form-label">Odometer</label><input class="form-input" type="number" id="v-odo" min="0"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Vehicle</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"><i class="fas fa-bell"></i><span id="notificationText"></span></div>
+
+    <script>
+        const DEMO_MAX_VEHICLES = 3;
+        const DB_NAME = 'SmartFleetDemo_v1';
+        let db;
+
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains('vehicles')) d.createObjectStore('vehicles', { keyPath: 'id', autoIncrement: true });
+            if (!d.objectStoreNames.contains('maintenance')) d.createObjectStore('maintenance', { keyPath: 'id', autoIncrement: true });
+            if (!d.objectStoreNames.contains('fuel')) d.createObjectStore('fuel', { keyPath: 'id', autoIncrement: true });
+        };
+        request.onsuccess = (e) => { db = e.target.result; initApp(); };
+
+        function showNotification(msg, type = 'info') {
+            const n = document.getElementById('notification');
+            document.getElementById('notificationText').textContent = msg;
+            n.className = `notification ${type} show`;
+            setTimeout(() => n.classList.remove('show'), 3000);
+        }
+
+        function getToday() { return new Date().toISOString().split('T')[0]; }
+        function daysLeft(d) { if(!d) return Infinity; return Math.ceil((new Date(d)-new Date(getToday()))/(86400000)); }
+        function formatCurrency(v) { return v ? '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:0}) : '$0'; }
+
+        function closeModal() { document.getElementById('vehicleModal').style.display = 'none'; }
+
+        async function getCount(s) { return new Promise(r => db.transaction([s],'readonly').objectStore(s).count().onsuccess = e => r(e.target.result)); }
+        async function getAll(s) { return new Promise(r => db.transaction([s],'readonly').objectStore(s).getAll().onsuccess = e => r(e.target.result)); }
+
+        function initApp() {
+            loadStats(); loadVehicles(); loadHistory(); loadUpcoming(); populateSelects();
+            document.getElementById('maint-date').value = getToday();
+            document.getElementById('fuel-date').value = getToday();
+        }
+
+        function loadStats() {
+            Promise.all([getAll('vehicles'), getAll('maintenance'), getAll('fuel')]).then(([v, m, f]) => {
+                document.getElementById('totalVehicles').textContent = v.length;
+                const pending = m.filter(x => x.nextDate && daysLeft(x.nextDate) < 0).length;
+                document.getElementById('pendingServices').textContent = pending;
+                const month = getToday().substring(0,7);
+                const mc = f.filter(x => x.date && x.date.startsWith(month)).reduce((s,x) => s+(x.cost||0), 0) +
+                         m.filter(x => x.date && x.date.startsWith(month)).reduce((s,x) => s+(x.cost||0), 0);
+                document.getElementById('totalCost').textContent = formatCurrency(mc);
+                const tm = m.reduce((s,x) => s+(x.cost||0),0);
+                const tf = f.reduce((s,x) => s+(x.cost||0),0);
+                const ta = f.reduce((s,x) => s+(x.amount||0),0);
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-card maintenance"><div class="stat-title">Maint. Costs</div><div class="stat-value">${formatCurrency(tm)}</div></div>
+                    <div class="stat-card fuel"><div class="stat-title">Fuel Used</div><div class="stat-value">${ta.toFixed(1)} L</div><div class="stat-subtitle">${formatCurrency(tf)}</div></div>
+                    <div class="stat-card insurance"><div class="stat-title">Pending</div><div class="stat-value">${pending}</div></div>
+                    <div class="stat-card inspection"><div class="stat-title">Vehicles</div><div class="stat-value">${v.length}</div></div>`;
+            });
+        }
+
+        function loadVehicles() {
+            getAll('vehicles').then(vehicles => {
+                const list = document.getElementById('vehiclesList');
+                if (vehicles.length === 0) { list.innerHTML = '<div class="empty-state"><i class="fas fa-car"></i><p>No vehicles yet</p></div>'; return; }
+                list.innerHTML = vehicles.map(v => `
+                    <div class="vehicle-card">
+                        <div class="vehicle-icon"><i class="fas fa-${v.type==='motorcycle'?'motorcycle':'car'}"></i></div>
+                        <div style="flex:1;"><div class="vehicle-info"><h4>${v.name} - ${v.plate}</h4><p>${v.type||'N/A'} • ${v.model||'N/A'} • ${v.color||'N/A'} • Odo: ${v.odometer||0}</p></div></div>
+                        <button class="btn btn-danger btn-xs" onclick="deleteVehicle(${v.id})"><i class="fas fa-trash"></i></button>
+                    </div>`).join('');
+            });
+        }
+
+        function loadHistory() {
+            Promise.all([getAll('maintenance'), getAll('fuel'), getAll('vehicles')]).then(([m, f, v]) => {
+                const getV = (id) => v.find(x => x.id === id);
+                const mb = document.getElementById('maintHistoryBody');
+                mb.innerHTML = m.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(x => {
+                    const veh = getV(x.vehicleId);
+                    return `<tr><td>${x.date}</td><td>${veh?veh.name:'?'}</td><td>${x.type}</td><td>${formatCurrency(x.cost)}</td><td>${x.nextDate||'-'}</td></tr>`;
+                }).join('') || '<tr><td colspan="5" class="text-center">No records</td></tr>';
+
+                const fb = document.getElementById('fuelHistoryBody');
+                fb.innerHTML = f.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(x => {
+                    const veh = getV(x.vehicleId);
+                    return `<tr><td>${x.date}</td><td>${veh?veh.name:'?'}</td><td><span class="fuel-type-badge fuel-${x.type}">${x.type}</span></td><td>${x.amount?.toFixed(1)}</td><td>${formatCurrency(x.cost)}</td></tr>`;
+                }).join('') || '<tr><td colspan="5" class="text-center">No records</td></tr>';
+            });
+        }
+
+        function loadUpcoming() {
+            Promise.all([getAll('maintenance'), getAll('vehicles')]).then(([m, v]) => {
+                const up = m.filter(x => x.nextDate && daysLeft(x.nextDate) >= -30 && daysLeft(x.nextDate) <= 30)
+                    .sort((a,b) => new Date(a.nextDate) - new Date(b.nextDate));
+                const list = document.getElementById('upcomingList');
+                list.innerHTML = up.length === 0 ? '<div class="empty-state"><p>All clear!</p></div>' :
+                    up.slice(0,5).map(x => {
+                        const veh = v.find(y => y.id === x.vehicleId);
+                        const d = daysLeft(x.nextDate);
+                        const txt = d < 0 ? `Overdue ${Math.abs(d)}d` : `${d} days`;
+                        return `<div class="maintenance-item ${d<=7?'urgent':''}"><div><strong>${veh?veh.name:'?'}</strong><br><small>${x.type}</small></div><strong>${txt}</strong></div>`;
+                    }).join('');
+            });
+        }
+
+        function populateSelects() {
+            getAll('vehicles').then(vehicles => {
+                ['maint-vehicle','fuel-vehicle'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (sel) sel.innerHTML = '<option value="">Select...</option>' + vehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join('');
+                });
+            });
+        }
+
+        window.deleteVehicle = function(id) {
+            if (!confirm('Delete this vehicle?')) return;
+            db.transaction(['vehicles'],'readwrite').objectStore('vehicles').delete(id).onsuccess = () => { showNotification('Deleted','success'); initApp(); };
+        };
+
+        // Events
+        document.getElementById('addVehicleBtn').addEventListener('click', async () => {
+            const count = await getCount('vehicles');
+            if (count >= DEMO_MAX_VEHICLES) { showNotification(`Demo limit: ${DEMO_MAX_VEHICLES} vehicles max. Upgrade for unlimited.`,'warning'); return; }
+            document.getElementById('vehicleModal').style.display = 'flex';
+        });
+
+        document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const count = await getCount('vehicles');
+            if (count >= DEMO_MAX_VEHICLES) { showNotification(`Demo limit: ${DEMO_MAX_VEHICLES} vehicles max.`,'warning'); return; }
+            const v = {
+                plate: document.getElementById('v-plate').value, name: document.getElementById('v-name').value,
+                type: document.getElementById('v-type').value, model: document.getElementById('v-model').value,
+                color: document.getElementById('v-color').value, odometer: parseInt(document.getElementById('v-odo').value)||0,
+                status: 'active', createdAt: new Date().toISOString()
+            };
+            if (!v.plate || !v.name || !v.type) return showNotification('Fill required fields','warning');
+            db.transaction(['vehicles'],'readwrite').objectStore('vehicles').add(v).onsuccess = () => {
+                showNotification('Vehicle added!','success');
+                closeModal(); document.getElementById('vehicleForm').reset(); initApp();
+            };
+        });
+
+        document.getElementById('maintenanceForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const m = {
+                vehicleId: parseInt(document.getElementById('maint-vehicle').value),
+                type: document.getElementById('maint-type').value,
+                date: document.getElementById('maint-date').value,
+                cost: parseInt(document.getElementById('maint-cost').value)||0,
+                nextDate: document.getElementById('maint-next').value || null,
+                odometer: parseInt(document.getElementById('maint-odo').value)||null,
+                createdAt: new Date().toISOString()
+            };
+            db.transaction(['maintenance'],'readwrite').objectStore('maintenance').add(m).onsuccess = () => {
+                showNotification('Service saved!','success');
+                document.getElementById('maintenanceForm').reset();
+                document.getElementById('maint-date').value = getToday();
+                initApp();
+            };
+        });
+
+        document.getElementById('fuelForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const f = {
+                vehicleId: parseInt(document.getElementById('fuel-vehicle').value),
+                date: document.getElementById('fuel-date').value,
+                amount: parseFloat(document.getElementById('fuel-amount').value),
+                cost: parseInt(document.getElementById('fuel-cost').value),
+                odometer: parseInt(document.getElementById('fuel-odo').value),
+                type: document.getElementById('fuel-type').value,
+                createdAt: new Date().toISOString()
+            };
+            db.transaction(['fuel'],'readwrite').objectStore('fuel').add(f).onsuccess = () => {
+                showNotification('Fuel logged!','success');
+                document.getElementById('fuelForm').reset();
+                document.getElementById('fuel-date').value = getToday();
+                initApp();
+            };
+        });
+
+        document.getElementById('loadSampleBtn').addEventListener('click', async () => {
+            const count = await getCount('vehicles');
+            if (count > 0 && !confirm('Data exists. Add sample data anyway?')) return;
+            const vStore = db.transaction(['vehicles'],'readwrite').objectStore('vehicles');
+            const mStore = db.transaction(['maintenance'],'readwrite').objectStore('maintenance');
+            const fStore = db.transaction(['fuel'],'readwrite').objectStore('fuel');
+            const t = getToday();
+            vStore.add({plate:'ABC-1234',name:'Ford Transit',type:'van',model:'2019',color:'White',odometer:45000,status:'active',createdAt:new Date().toISOString()}).onsuccess = (e) => {
+                const id = e.target.result;
+                mStore.add({vehicleId:id,type:'oil-change',date:t,cost:150,nextDate:t,odometer:44000,createdAt:new Date().toISOString()});
+                fStore.add({vehicleId:id,date:t,amount:55,cost:82,odometer:44900,type:'gasoline',createdAt:new Date().toISOString()});
+            };
+            vStore.add({plate:'XYZ-9876',name:'Toyota Camry',type:'car',model:'2021',color:'Silver',odometer:22000,status:'active',createdAt:new Date().toISOString()});
+            vStore.add({plate:'TRK-5555',name:'Volvo FH16',type:'truck',model:'2018',color:'Blue',odometer:120000,status:'active',createdAt:new Date().toISOString()});
+            setTimeout(() => { showNotification('Sample data loaded!','success'); initApp(); }, 500);
+        });
+
+        document.getElementById('clearDataBtn').addEventListener('click', () => {
+            if (!confirm('Delete ALL data?')) return;
+            ['vehicles','maintenance','fuel'].forEach(s => db.transaction([s],'readwrite').objectStore(s).clear());
+            showNotification('All data cleared','success'); initApp();
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById(this.dataset.tab+'-tab').classList.add('active');
+            if (this.dataset.tab === 'history') loadHistory();
+        }));
+
+        document.addEventListener('contextmenu', e => { e.preventDefault(); alert('⛔ Demo version. Purchase at digitalyar.company'); });
+        document.addEventListener('keydown', e => { if ((e.ctrlKey&&e.key==='s')||(e.ctrlKey&&e.key==='u')||e.key==='F12') e.preventDefault(); });
+    </script>
+</body>
+</html>
